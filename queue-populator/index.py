@@ -18,7 +18,7 @@ def list_files_in_s3(bucket_name, prefix):
 
 def handler(event, context):
     input_bucket = event['input_bucket']
-    prefix = "AWSDynamoDB/"  # Base prefix
+    prefix = "AWSDynamoDB/"  
     files = list_files_in_s3(input_bucket, prefix)
     queue_url = event['queue_url']
     output_bucket = event['output_bucket']

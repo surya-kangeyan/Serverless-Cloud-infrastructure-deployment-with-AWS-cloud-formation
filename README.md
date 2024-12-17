@@ -55,7 +55,9 @@
 
 **5. What assumptions did you make while designing the system, and how could they affect real-world deployment?**
 
-- During the development of this system, I made several key assumptions that simplified the implementation process. My primary assumption was that the created template.yaml structure was production-ready and wouldn't require modifications. This assumption led me to focus on getting the correct deployment sequence working (setup.sh → deploy_stack.sh → collate.sh) rather than optimizing the infrastructure code. Focusing on adding proper IAM policies in the template.sh file would've saved me several iterations of starting the project from scratch
+- During the development of this system, I made several key assumptions that simplified the implementation process. My primary assumption was that the created template.yaml structure was production-ready and wouldn't require modifications. This assumption led me to focus on getting the correct deployment sequence working (setup.sh → deploy_stack.sh → collate.sh) rather than optimizing the infrastructure code. Focusing on adding proper IAM policies in the template.sh file would've saved me several iterations of starting the project from scratch`
+
+- I took the liberty of modifying the queue-populator/ and json-to-csv-converter/ index.py files to include try-catch blocks for debugging purposes. Additionally, I optimized the json-to-csv-converter/index.py script to handle files more efficiently, which improved the robustness of the system during development and testing.
 
 - Another significant assumption was about the Lambda function code. I assumed that once the CloudFormation stack was successfully created, I only needed to focus on uploading the Lambda code correctly to S3 and updating the functions. This led to multiple iterations of the deployment process where I had to carefully sequence my actions: first deploying the stack, then uploading code to S3, and finally updating the Lambda functions.
 
