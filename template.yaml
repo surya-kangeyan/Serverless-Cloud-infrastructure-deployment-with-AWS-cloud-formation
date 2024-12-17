@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template for CS218 Final Project'
+
+Parameters:
+  StudentId:
+    Type: String
+    Description: Student ID for resource naming
+
+Resources:
+  FinalOutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub cs218-final-output-bucket-${StudentId}
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  JsonToCsvQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub json-to-csv-queue-${StudentId}
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 3600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt JsonToCsvDLQ.Arn
+        maxReceiveCount: 3
+
+  JsonToCsvDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub json-to-csv-dlq-${StudentId}
+      MessageRetentionPeriod: 1209600
+
+  QueuePopulatorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: QueuePopulatorPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub arn:aws:s3:::cs218-final-input-bucket-${StudentId}
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: !GetAtt JsonToCsvQueue.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub arn:aws:s3:::cs218-final-input-bucket-${StudentId}/*
+
+  ConverterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ConverterPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt JsonToCsvQueue.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub arn:aws:s3:::cs218-final-input-bucket-${StudentId}/*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${FinalOutputBucket.Arn}/*
+                  - !Sub ${FinalOutputBucket.Arn}/csv_files/*
+
+  QueuePopulatorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub queue-populator-${StudentId}
+      Handler: index.handler
+      Role: !GetAtt QueuePopulatorRole.Arn
+      Code:
+        S3Bucket: !Sub cs218-final-code-bucket-${StudentId}
+        S3Key: queue-populator.zip
+      Runtime: python3.9
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref JsonToCsvQueue
+          OUTPUT_BUCKET: !Ref FinalOutputBucket
+
+  ConverterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub json-to-csv-converter-${StudentId}
+      Handler: index.handler
+      Role: !GetAtt ConverterRole.Arn
+      Code:
+        S3Bucket: !Sub cs218-final-code-bucket-${StudentId}
+        S3Key: json-to-csv-converter.zip
+      Runtime: python3.9
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          OUTPUT_BUCKET: !Ref FinalOutputBucket
+
+  ConverterEventSource:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn: !GetAtt JsonToCsvQueue.Arn
+      FunctionName: !Ref ConverterFunction
+
+Outputs:
+  QueueUrl:
+    Description: URL of the SQS Queue
+    Value: !Ref JsonToCsvQueue
+    Export:
+      Name: !Sub ${AWS::StackName}-QueueUrl
+
+  OutputBucketName:
+    Description: Name of the Output S3 Bucket
+    Value: !Ref FinalOutputBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-OutputBucket
+
+  QueuePopulatorFunction:
+    Description: Name of the Queue Populator Lambda Function
+    Value: !Ref QueuePopulatorFunction
+    Export:
+      Name: !Sub ${AWS::StackName}-QueuePopulator
+
+  ConverterFunction:
+    Description: Name of the Converter Lambda Function
+    Value: !Ref ConverterFunction
+    Export:
+      Name: !Sub ${AWS::StackName}-Converter
