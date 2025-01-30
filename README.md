@@ -1,6 +1,6 @@
-# CS-218-final-Assignment
+# Serverless-Cloud-infrastructure-deployment-with-AWS-cloud-formation
 
-## QnA
+
 
 **1. What are the primary advantages of using CloudFormation for this project?**
 
@@ -20,7 +20,7 @@
 
 - This automated approach saves time and reduces complexity in managing our AWS infrastructure, making the entire process more reliable and efficient.
 
-**2. How did you approach debugging issues during the deployment process?**
+**2. How did I approach debugging issues during the deployment process?**
 
 - During the deployment process, I encountered several challenges that required a systematic debugging approach. I primarily relied on CloudFormation's stack events to trace issues, which proved invaluable when my initial stack deployments failed. For example, when I first deployed the template, I discovered missing IAM permissions for the Lambda functions through stack event logs, requiring me to iteratively refine the IAM role definitions in template.yaml.
 
@@ -34,7 +34,7 @@
 
 - This iterative debugging process helped me build a more robust and reliable solution, with each iteration addressing specific issues discovered during testing and deployment.
 
-**3. Which AWS service or component did you find most challenging, and why?**
+**3. Which AWS service or component did I find most challenging, and why?**
 
 - The most challenging aspect of this project was handling the Lambda function code updates and their integration with CloudFormation stack deployments. I particularly struggled with the sequence of uploading Lambda code to S3 (which I always seemed to forget after resetting and creating a new stack) and ensuring the CloudFormation stack could access it correctly multiple times. When my initial deployments failed, I discovered that simply updating the stack wasn't enough - I needed to maintain a specific order of operations: creating zip files, uploading to S3, and then updating the Lambda functions, which was initially very hard to find out.
 
@@ -43,7 +43,7 @@
 - The debugging process was particularly complex because it involved multiple services working together. For example, when the queue-populator Lambda wasn't finding files, I had to verify the S3 bucket contents using 'aws s3 ls', check Lambda execution role permissions, and monitor CloudWatch logs simultaneously. This helped me understand that my Lambda function needed updated code to handle the specific path structure of the DynamoDB export files (AWSDynamoDB/01734455334387-d14728cf/data/).
 
 
-**4. How would you modify the architecture to handle an increased number of .json.gz files (e.g., scaling considerations)?**
+**4. How would I modify the architecture to handle an increased number of .json.gz files (e.g., scaling considerations)?**
 
 - To handle a larger volume of .json.gz files efficiently, I would implement several architectural modifications focusing on scalability and performance. The primary change would be optimizing the Lambda function configurations for better parallel processing. Instead of processing files sequentially, I would modify the queue-populator Lambda to implement batch processing, allowing it to send multiple messages to SQS simultaneously using batch operations (sqs:SendMessageBatch).
 
@@ -53,7 +53,7 @@
 
 - These modifications,I think, would make the system more resilient and efficient when processing thousands of files, while maintaining data consistency and reliability.
 
-**5. What assumptions did you make while designing the system, and how could they affect real-world deployment?**
+**5. What assumptions did I make while designing the system, and how could they affect real-world deployment?**
 
 - During the development of this system, I made several key assumptions that simplified the implementation process. My primary assumption was that the created template.yaml structure was production-ready and wouldn't require modifications. This assumption led me to focus on getting the correct deployment sequence working (setup.sh → deploy_stack.sh → collate.sh) rather than optimizing the infrastructure code. Focusing on adding proper IAM policies in the template.sh file would've saved me several iterations of starting the project from scratch`
 
